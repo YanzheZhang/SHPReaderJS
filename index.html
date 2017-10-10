@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <script src="shp.js"></script>
+    <style type="text/css">
+        #canvas{
+            border: 1px solid #ADACB0;
+            display: block;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+<canvas id="canvas" width="720" height="360">
+    你的浏览器还不支持canvas
+</canvas>
+<script type="text/javascript">
+    var canvas = document.getElementById("canvas");
+    var context = canvas.getContext("2d");
+    //设置样式
+    context.lineWidth = 1;
+    context.strokeStyle = "#F5270B";
+    SHPParser.load('china.shp',
+        function(res) {
+            console.log('ok', res);
+            for(var i=0;i<res.records.length;i++){
+                var points=res.records[i].shape.content.points;
+                //绘制每一个折线
+                context.beginPath();
+                context.moveTo(4.0*points[0],2.0*(180.0-2.0*points[1]));
+                for(var j=1;j<points.length/2;j++){
+                    context.lineTo(4.0*points[j*2],2.0*(180.0-2.0*points[j*2+1]));
+                }
+                //绘制
+                context.stroke();
+            }
+        },
+        function(res){ console.log('error', res); }
+    );
+</script>
+</body>
+</html>
