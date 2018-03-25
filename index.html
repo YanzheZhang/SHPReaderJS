@@ -1,7 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head lang="en">
     <meta charset="UTF-8">
+    <title>js读取shp文件</title>
     <script src="shp.js"></script>
     <style type="text/css">
         #canvas{
@@ -12,6 +13,8 @@
     </style>
 </head>
 <body>
+    <div onclick="draw()" style="background-color:#a5c161">直接绘制</div>
+    <input type="file" accept="*.shp" onchange="openfile(this)"/>
 <canvas id="canvas" width="720" height="360">
     你的浏览器还不支持canvas
 </canvas>
@@ -21,23 +24,70 @@
     //设置样式
     context.lineWidth = 1;
     context.strokeStyle = "#F5270B";
-    SHPParser.load('china.shp',
-        function(res) {
-            console.log('ok', res);
-            for(var i=0;i<res.records.length;i++){
-                var points=res.records[i].shape.content.points;
-                //绘制每一个折线
-                context.beginPath();
-                context.moveTo(4.0*points[0],2.0*(180.0-2.0*points[1]));
-                for(var j=1;j<points.length/2;j++){
-                    context.lineTo(4.0*points[j*2],2.0*(180.0-2.0*points[j*2+1]));
+
+    /*
+    直接获取服务端shp文件绘制
+    */
+    function draw() {
+        SHPParser.load('china.shp',
+            function(res) {
+                console.log('ok', res);
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                for(var i=0;i<res.records.length;i++){
+                    var points=res.records[i].shape.content.points;
+                    //绘制每一个折线
+                    context.beginPath();
+                    context.moveTo(4.0*points[0],2.0*(180.0-2.0*points[1]));
+                    for(var j=1;j<points.length/2;j++){
+                        context.lineTo(4.0*points[j*2],2.0*(180.0-2.0*points[j*2+1]));
+                    }
+                    //绘制
+                    context.stroke();
                 }
-                //绘制
-                context.stroke();
-            }
-        },
-        function(res){ console.log('error', res); }
-    );
+            },
+            function(res){ console.log('error', res); }
+        );
+    }
+
+    /*
+    打开本地shp文件绘制
+    */
+    function openfile(obj) {
+        if (obj.files) { } else {
+            alert('未选中文件！');
+            return;
+        }
+        var file = obj.files[0];
+ 
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            //e.target.result;
+            //var buffer = new ArrayBuffer(e.target.result);
+            SHPParser.loadArrayBuffer(e.target.result,
+            function (res) {
+                console.log('ok', res);
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                for (var i = 0; i < res.records.length; i++) {
+                    var points = res.records[i].shape.content.points;
+                    //绘制每一个折线
+                    context.beginPath();
+                    context.moveTo(4.0 * points[0], 2.0 * (180.0 - 2.0 * points[1]));
+                    for (var j = 1; j < points.length / 2; j++) {
+                        context.lineTo(4.0 * points[j * 2], 2.0 * (180.0 - 2.0 * points[j * 2 + 1]));
+                    }
+                    //绘制
+                    context.stroke();
+                }
+                if (obj != null) {
+                    obj.value = null;
+                }
+            },
+            function () { alert('读取错误！'); }
+            );
+            //obj.value = null;
+        };
+        reader.readAsArrayBuffer(file);//readAsArrayBuffer readAsBinaryString
+    }
 </script>
 </body>
 </html>

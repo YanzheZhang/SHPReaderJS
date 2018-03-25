@@ -1,5 +1,14 @@
-// Shapefile parser, following the specification at
-// http://www.esri.com/library/whitepapers/pdfs/shapefile.pdf
+///
+/// Author: YanzheZhang
+/// Date: 25/3/2018
+/// Desc:添加loadArrayBuffer
+/// 
+/// Revision History:
+/// -----------------------------------
+///   Author: http://www.esri.com/library/whitepapers/pdfs/shapefile.pdf
+///   Date:
+///   Desc:Shapefile parser
+
 SHP = {
   NULL: 0,
   POINT: 1,
@@ -45,13 +54,20 @@ SHPParser.load = function(src, callback, onerror) {
   xhr.open('GET', src);
   xhr.send(null);
 };
-
+SHPParser.loadArrayBuffer = function (arrayBuffer, callback, onerror) {
+    var d = new SHPParser().parse(arrayBuffer);
+    if (d) {
+        callback(d);
+    } else {
+        onerror();
+    }
+}
 SHPParser.prototype.parse = function(arrayBuffer) {
   var o = {};
   var dv = new DataView(arrayBuffer);
-  var idx = 0;
+  var idx = 0;//当前流位置
   o.fileCode = dv.getInt32(idx, false);
-  if (o.fileCode != 0x0000270a) {
+  if (o.fileCode != 0x0000270a) { //9994
     throw (new Error("Unknown file code: " + o.fileCode));
   }
   idx += 6*4;
