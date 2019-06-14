@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>js读取shp文件</title>
+    <script src="shp.js"></script>
+    <script src="./node_modules/proj4/dist/proj4-src.js"></script>
+    <style type="text/css">
+        #canvas{
+            border: 1px solid #ADACB0;
+            display: block;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <div onclick="draw()" style="background-color:#a5c161">直接绘制</div>
+    <input type="file" multiple accept="*.shp,*.prj,*.dbf,*.shx" onchange="openfile(this)"/>
+<canvas id="canvas" width="720" height="360">
+    你的浏览器还不支持canvas
+</canvas>
+<script type="text/javascript">
+    var alberProj = 'PROJCS["WGS_1984_Albers",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Albers"],PARAMETER["standard_parallel_1",25],PARAMETER["standard_parallel_2",47],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",105],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["meters",1]]';
+    var wgs84Proj = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]';
+
+    var canvas = document.getElementById("canvas");
+    var context = canvas.getContext("2d");
+    //设置样式
+    context.lineWidth = 1;
+    context.strokeStyle = "#F5270B";
+
+    /*
+    直接获取服务端shp文件绘制
+    */
+    function draw() {
+        SHPParser.load('./data/china.shp',
+            function(res) {
+                console.log('ok', res);
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                for(var i=0;i<res.records.length;i++){
+                    var points=res.records[i].shape.content.points;
+                    //绘制每一个折线
+                    context.beginPath();
+                    context.moveTo(4.0*points[0],2.0*(180.0-2.0*points[1]));
+                    for(var j=1;j<points.length/2;j++){
+                        context.lineTo(4.0*points[j*2],2.0*(180.0-2.0*points[j*2+1]));
+                    }
+                    //绘制
+                    context.stroke();
+                }
+            },
+            function(res){ console.log('error', res); }
+        );
+    }
+
+    /*
+    打开本地shp文件绘制
+    */
+    function openfile(obj) {
+        if (obj.files) { } else {
+            alert('未选中文件！');
+            return;
+        }
+        if (obj.files.length != 4) {
+            alert('请同时选择shp、prj、shx和dbf四个文件！');
+            return;
+        }
+        var nameArr = [];
+        var typeArr = [];
+        var typeStr = '';
+        for (var i = 0; i < obj.files.length; i++) {
+            nameArr[i] = obj.files[i].name.slice(0, obj.files[i].name.length - 4);
+            typeArr[i] = obj.files[i].name.slice(obj.files[i].name.length - 3, obj.files[i].name.length);
+            typeStr += obj.files[i].name.slice(obj.files[i].name.length - 3, obj.files[i].name.length);
+        }
+        if (nameArr[0] != nameArr[1] || nameArr[0] != nameArr[2] || nameArr[0] != nameArr[3]) {
+            alert('请选择同一矢量文件！');
+            //$.messager.alert('提示', '请选择同一矢量文件!');
+            return;
+        }
+        for (var i = 0; i < obj.files.length; i++) {
+            if (obj.files[i].size > 5 * 1024 * 1024) {
+                alert('矢量文件超过5M，请抽稀后上传！');
+                //$.messager.alert('提示', '矢量文件超过5M，请抽稀后上传!');
+                return;
+            }
+        }
+        if (typeStr.indexOf("shp") < 0) {
+            alert('缺少shp文件！');
+            //$.messager.alert('提示', '缺少shp文件！');
+            return;
+        }
+        if (typeStr.indexOf("dbf") < 0) {
+            alert('缺少dbf文件！');
+            //$.messager.alert('提示', '缺少dbf文件！');
+            return;
+        }
+        if (typeStr.indexOf("prj") < 0) {
+            alert('缺少prj文件！');
+            //$.messager.alert('提示', '缺少prj文件！');
+            return;
+        }
+        if (typeStr.indexOf("shx") < 0) {
+            alert('缺少shx文件！');
+            //$.messager.alert('提示', '缺少shx文件！');
+            return;
+        }
+
+        var isshp = false,  isprj = false;
+        var datashp, datadbf, dataprj, datashx;
+
+        for (var i = 0; i < typeArr.length; i++) {
+            switch (typeArr[i]) {
+                case 'shp':
+                    var fshp = obj.files[i];
+                    var readershp = new FileReader();
+                    readershp.onload = function (e) {
+                        datashp = e.target.result;
+                        isshp = true;
+                        if (isshp && isprj) {
+                            //UploadScopeShp(datashp, datadbf, dataprj, datashx);
+                            processData(datashp, dataprj);
+                            if (obj != null) {
+                                obj.value = null;
+                            }
+                        }
+                    };
+                    readershp.readAsArrayBuffer(fshp);
+                    break;
+                case 'prj':
+                    var fprj = obj.files[i];
+                    var readerprj = new FileReader();
+                    readerprj.onload = function (e) {
+                        dataprj = e.target.result;
+                        isprj = true;
+                        if (isshp && isprj) {
+                            //UploadScopeShp(datashp, datadbf, dataprj, datashx);
+                            processData(datashp, dataprj);
+                            if (obj != null) {
+                                obj.value = null;
+                            }
+                        }
+                    };
+                    readerprj.readAsText(fprj);
+                    break;               
+            }
+        }
+    }
+
+    function processData(shpData, prjData) {
+        if (prjData.indexOf('PROJCS') > -1 && prjData.indexOf('WGS_1984_Albers') > -1) {
+            //需要转换
+            SHPParser.loadArrayBuffer(shpData,
+           function (res) {
+               //console.log('ok', res);
+               context.clearRect(0, 0, canvas.width, canvas.height);
+               for (var i = 0; i < res.records.length; i++) {
+                   var points = res.records[i].shape.content.points;
+                   //绘制每一个折线
+                   context.beginPath();
+                   var pointProj0 = proj4(alberProj, wgs84Proj, [points[0], points[1]]);
+                   context.moveTo(4.0 * pointProj0[0], 2.0 * (180.0 - 2.0 * pointProj0[1]));
+                   for (var j = 1; j < points.length / 2; j++) {
+                       var pointProj = proj4(alberProj, wgs84Proj, [points[j * 2], points[j * 2 + 1]]);
+                       context.lineTo(4.0 * pointProj[0], 2.0 * (180.0 - 2.0 * pointProj[1]));
+                   }
+                   //绘制
+                   context.stroke();
+               }
+                
+           },
+           function () { alert('读取错误！'); }
+           );
+        } else if (prjData.indexOf('GEOGCS') > -1 && prjData.indexOf('GCS_WGS_1984') > -1 && prjData.indexOf('PROJCS') < 0) {
+            //不需要转换
+            SHPParser.loadArrayBuffer(shpData,
+           function (res) {
+               context.clearRect(0, 0, canvas.width, canvas.height);
+               for (var i = 0; i < res.records.length; i++) {
+                   var points = res.records[i].shape.content.points;
+                   //绘制每一个折线
+                   context.beginPath();
+                   context.moveTo(4.0 * points[0], 2.0 * (180.0 - 2.0 * points[1]));
+                   for (var j = 1; j < points.length / 2; j++) {
+                       context.lineTo(4.0 * points[j * 2], 2.0 * (180.0 - 2.0 * points[j * 2 + 1]));
+                   }
+                   //绘制
+                   context.stroke();
+               }
+                
+           },
+           function () { alert('读取错误！'); }
+           );
+        } else {
+            //其它
+            alert('投影不正确！');
+        }
+    }
+</script>
+</body>
+</html>

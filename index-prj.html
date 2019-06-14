@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>js读取shp文件</title>
     <script src="shp.js"></script>
+    <script src="./node_modules/proj4/dist/proj4-src.js"></script>
     <style type="text/css">
         #canvas{
             border: 1px solid #ADACB0;
@@ -61,6 +62,8 @@
  
         var reader = new FileReader();
         reader.onload = function (e) {
+            var fromProj = 'PROJCS["WGS_1984_Albers",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Albers"],PARAMETER["standard_parallel_1",25],PARAMETER["standard_parallel_2",47],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",105],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["meters",1]]';
+            var toProj = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]';
             //e.target.result;
             //var buffer = new ArrayBuffer(e.target.result);
             SHPParser.loadArrayBuffer(e.target.result,
@@ -71,9 +74,14 @@
                     var points = res.records[i].shape.content.points;
                     //绘制每一个折线
                     context.beginPath();
-                    context.moveTo(4.0 * points[0], 2.0 * (180.0 - 2.0 * points[1]));
+                    var pointProj0 = proj4(fromProj, toProj, [points[0], points[1]]);
+                    console.log(pointProj0);
+
+                    context.moveTo(4.0 * pointProj0[0], 2.0 * (180.0 - 2.0 * pointProj0[1]));
                     for (var j = 1; j < points.length / 2; j++) {
-                        context.lineTo(4.0 * points[j * 2], 2.0 * (180.0 - 2.0 * points[j * 2 + 1]));
+                        var pointProj = proj4(fromProj, toProj, [points[j * 2], points[j * 2 + 1]]);
+                        //context.lineTo(4.0 * points[j * 2], 2.0 * (180.0 - 2.0 * points[j * 2 + 1]));
+                        context.lineTo(4.0 * pointProj[0], 2.0 * (180.0 - 2.0 * pointProj[1]));
                     }
                     //绘制
                     context.stroke();
